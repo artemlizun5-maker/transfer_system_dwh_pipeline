@@ -1,0 +1,91 @@
+version: 2
+
+models:
+
+  - name: dim_drivers
+    description: "Справочник водителей (актуальное состояние)"
+    columns:
+      - name: driver_id
+        description: "Первичный ключ водителя"
+        tests:
+          - unique
+          - not_null
+
+      - name: user_id
+        description: "Внешний ключ на пользователя"
+        tests:
+          - not_null
+
+  - name: dim_vehicles
+    description: "Справочник автомобилей"
+    columns:
+      - name: vehicle_id
+        description: "Первичный ключ автомобиля"
+        tests:
+          - unique
+          - not_null
+
+      - name: plate_number
+        description: "Госномер автомобиля"
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_orders
+    description: "Таблица фактов по заказам"
+    columns:
+      - name: order_id
+        description: "Первичный ключ заказа"
+        tests:
+          - unique
+          - not_null
+
+      - name: order_status
+        description: "Текущий статус заказа"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['created', 'assigned', 'in_progress', 'completed', 'cancelled']
+
+      - name: price
+        description: "Стоимость поездки"
+        tests:
+          - not_null
+
+      - name: driver_id
+        description: "Внешний ключ на водителя (NULL если заказ еще не назначен)"
+        tests:
+          - relationships:
+              to: ref('dim_drivers')
+              field: driver_id
+
+      - name: vehicle_id
+        description: "Внешний ключ на авто (NULL если авто еще не назначено)"
+        tests:
+          - relationships:
+              to: ref('dim_vehicles')
+              field: vehicle_id
+
+  - name: fct_order_status_history
+    description: "Лог переходов заказов по статусам и расчет длительности"
+    columns:
+      - name: history_id
+        description: "Первичный ключ записи истории"
+        tests:
+          - unique
+          - not_null
+
+      - name: order_id
+        description: "Внешний ключ на заказ"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('fct_orders')
+              field: order_id
+
+      - name: current_status
+        description: "Статус заказа в момент фиксации"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['created', 'assigned', 'in_progress', 'completed', 'cancelled']

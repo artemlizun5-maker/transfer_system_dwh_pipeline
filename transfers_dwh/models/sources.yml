@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: staging
+    schema: staging
+    description: "Сырые данные, загруженные через инкрементальный ELT-пайплайн"
+    tables:
+      - name: users
+        description: "Пользователи системы (водители, менеджеры, админ)"
+      - name: vehicles
+        description: "Автопарк компании"
+      - name: drivers
+        description: "Профили водителей"
+      - name: orders
+        description: "Транзакции заказов"
+        loaded_at_field: _staged_at 
+      - name: order_status_history
+        description: "Append-only аудит-лог изменения статусов заказов"

@@ -1,0 +1,21 @@
+select
+    order_id,
+    client_name,
+    client_phone,
+    passengers_count,
+    pickup_address,
+    dropoff_address,
+    scheduled_pickup_at,
+    requested_car_model,
+    price,
+    notes,
+    status as order_status,
+    driver_id,
+    vehicle_id,
+    created_by_user_id,
+    created_at,
+    updated_at,
+    completed_at,
+    updated_by_user_id,
+    _staged_at
+from {{ source('staging', 'orders') }}

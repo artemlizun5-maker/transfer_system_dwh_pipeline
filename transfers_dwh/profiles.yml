@@ -1,0 +1,12 @@
+transfers_dwh:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: host.docker.internal
+      user: postgres
+      password: "1234"
+      port: 5432
+      dbname: transfer_system
+      schema: dwh
+      threads: 4
