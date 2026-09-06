@@ -42,7 +42,7 @@ flowchart LR
 (`dags/transfer_pipeline.py`):
 
 ```
-load_to_staging  →  dbt_run  →  dbt_snapshot  →  dbt_test
+load_to_staging  →  dbt_snapshot  →  dbt_run  →  dbt_test
 ```
 
 ## Что технически интересного в проекте
@@ -84,31 +84,6 @@ Python (генератор тестовых данных на Faker)
     ├── profiles.yml                # без секретов, читает переменные окружения
     └── generate_data.py            # генерация тестовых данных (Faker)
 ```
-
-## Как запустить локально
-
-1. Поднять локальный PostgreSQL и создать базу `transfer_system`, затем
-   выполнить по очереди `sql/01_oltp_schema.sql` и `sql/02_staging_schema.sql`.
-2. `cp .env.example .env` и подставить свой пароль от БД.
-3. ```bash
-   cd transfers_dwh
-   pip install -r requirements.txt
-   set -a && source ../.env && set +a
-   python generate_data.py          # наполнит oltp тестовыми данными
-   ```
-4. Разово прогнать синхронизацию oltp → staging (в дальнейшем это делает Airflow):
-   ```sql
-   CALL staging.prc_load_users();
-   CALL staging.prc_load_vehicles();
-   CALL staging.prc_load_drivers();
-   CALL staging.prc_load_orders();
-   CALL staging.prc_load_order_status_history();
-   ```
-5. `dbt run --profiles-dir . && dbt snapshot --profiles-dir . && dbt test --profiles-dir .`
-
-Либо поднять оркестрацию целиком через Airflow:
-`docker compose up airflow-init && docker compose up -d`, UI на
-`localhost:8088`, включить DAG `transfers_dwh_pipeline`.
 
 ## Известные ограничения
 
