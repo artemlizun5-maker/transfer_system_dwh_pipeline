@@ -47,4 +47,4 @@ with DAG(
         bash_command='cd /opt/airflow/transfers_dwh && dbt clean && dbt snapshot --profiles-dir .',
     )
     
-    load_to_staging >> dbt_run >> dbt_snapshot >> dbt_test
+    load_to_staging >> dbt_snapshot >> dbt_run >> dbt_test
