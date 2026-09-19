@@ -521,4 +521,20 @@ docker compose down -v --remove-orphans
 
 # Project Goal
 
-Основная цель проекта — показать, как можно построи
+Основная цель проекта — показать, как можно построить законченный локальный Data Engineering pipeline:
+
+Source OLTP
+    ↓
+Incremental ETL
+    ↓
+Staging
+    ↓
+dbt transformations
+    ↓
+SCD2 / Incremental models
+    ↓
+DWH / Data Marts
+    ↓
+Data Quality Tests
+
+Проект сделан как pet-project для практики PostgreSQL, SQL, PL/pgSQL, dbt, Airflow, Docker и основных подходов Data Engineering.
