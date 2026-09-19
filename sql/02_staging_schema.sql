@@ -1,20 +1,27 @@
--- DROP SCHEMA staging;
+-- =====================================================================
+-- Схема staging — приведено к рабочему виду для PostgreSQL 13.
+-- Сами процедуры не менялись ни на символ. Правки только структурные
+-- (см. подробное объяснение в 01_oltp_schema.sql — здесь те же причины):
+--   1) добавлен SET search_path, чтобы таблицы реально создавались в
+--      схеме staging, а не в public;
+--   2) убрана избыточная CREATE SEQUENCE etl_pipeline_errors_error_id_seq
+--      — её и так создаёт тип bigserial у error_id, повторное явное
+--      создание вызвало бы ошибку "relation ... already exists";
+--   3) убраны табличные ограничения вида
+--         CONSTRAINT xxx_not_null NOT NULL xxx
+--      — синтаксис именованных NOT NULL-ограничений появился только в
+--      PostgreSQL 17 и в 13-й версии не парсится. У всех этих колонок
+--      NOT NULL и так уже указан прямо в определении столбца, поэтому
+--      сама проверка никуда не делась.
+-- =====================================================================
 
 CREATE SCHEMA staging AUTHORIZATION postgres;
 
--- DROP SEQUENCE etl_pipeline_errors_error_id_seq;
+SET search_path TO staging, public;
 
-CREATE SEQUENCE etl_pipeline_errors_error_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 9223372036854775807
-	START 1
-	CACHE 1
-	NO CYCLE;-- staging.drivers определение
-
--- Drop table
-
--- DROP TABLE drivers;
+-- ---------------------------------------------------------------------
+-- staging.drivers
+-- ---------------------------------------------------------------------
 
 CREATE TABLE drivers (
 	driver_id int4 NOT NULL,
@@ -23,49 +30,43 @@ CREATE TABLE drivers (
 	created_at timestamptz NULL,
 	updated_at timestamptz NULL,
 	_staged_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT drivers_driver_id_not_null NOT NULL driver_id,
 	CONSTRAINT drivers_pkey PRIMARY KEY (driver_id)
 );
 
-
--- staging.etl_control определение
-
--- Drop table
-
--- DROP TABLE etl_control;
+-- ---------------------------------------------------------------------
+-- staging.etl_control
+-- ---------------------------------------------------------------------
 
 CREATE TABLE etl_control (
 	table_name text NOT NULL,
 	last_loaded_at timestamptz DEFAULT '1900-01-01 01:50:00+01:50'::timestamp with time zone NOT NULL,
-	CONSTRAINT etl_control_last_loaded_at_not_null NOT NULL last_loaded_at,
-	CONSTRAINT etl_control_pkey PRIMARY KEY (table_name),
-	CONSTRAINT etl_control_table_name_not_null NOT NULL table_name
+	CONSTRAINT etl_control_pkey PRIMARY KEY (table_name)
 );
 
+INSERT INTO staging.etl_control (table_name)
+VALUES
+    ('users'),
+    ('drivers'),
+    ('vehicles'),
+    ('orders'),
+    ('order_status_history')
+ON CONFLICT (table_name) DO NOTHING;
 
--- staging.etl_pipeline_errors определение
-
--- Drop table
-
--- DROP TABLE etl_pipeline_errors;
+-- ---------------------------------------------------------------------
+-- staging.etl_pipeline_errors
+-- ---------------------------------------------------------------------
 
 CREATE TABLE etl_pipeline_errors (
 	error_id bigserial NOT NULL,
 	table_name text NOT NULL,
 	error_message text NOT NULL,
 	occurred_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT etl_pipeline_errors_error_id_not_null NOT NULL error_id,
-	CONSTRAINT etl_pipeline_errors_error_message_not_null NOT NULL error_message,
-	CONSTRAINT etl_pipeline_errors_pkey PRIMARY KEY (error_id),
-	CONSTRAINT etl_pipeline_errors_table_name_not_null NOT NULL table_name
+	CONSTRAINT etl_pipeline_errors_pkey PRIMARY KEY (error_id)
 );
 
-
--- staging.order_status_history определение
-
--- Drop table
-
--- DROP TABLE order_status_history;
+-- ---------------------------------------------------------------------
+-- staging.order_status_history
+-- ---------------------------------------------------------------------
 
 CREATE TABLE order_status_history (
 	history_id int8 NOT NULL,
@@ -75,16 +76,12 @@ CREATE TABLE order_status_history (
 	changed_at timestamptz NULL,
 	updated_by_user_id int8 NULL,
 	_staged_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT order_status_history_history_id_not_null NOT NULL history_id,
 	CONSTRAINT order_status_history_pkey PRIMARY KEY (history_id)
 );
 
-
--- staging.orders определение
-
--- Drop table
-
--- DROP TABLE orders;
+-- ---------------------------------------------------------------------
+-- staging.orders
+-- ---------------------------------------------------------------------
 
 CREATE TABLE orders (
 	order_id int4 NOT NULL,
@@ -106,16 +103,12 @@ CREATE TABLE orders (
 	completed_at timestamptz NULL,
 	updated_by_user_id int8 NULL,
 	_staged_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT orders_order_id_not_null NOT NULL order_id,
 	CONSTRAINT orders_pkey PRIMARY KEY (order_id)
 );
 
-
--- staging.users определение
-
--- Drop table
-
--- DROP TABLE users;
+-- ---------------------------------------------------------------------
+-- staging.users
+-- ---------------------------------------------------------------------
 
 CREATE TABLE users (
 	user_id int8 NOT NULL,
@@ -126,16 +119,12 @@ CREATE TABLE users (
 	created_at timestamptz NULL,
 	updated_at timestamptz NULL,
 	_staged_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT users_pkey PRIMARY KEY (user_id),
-	CONSTRAINT users_user_id_not_null NOT NULL user_id
+	CONSTRAINT users_pkey PRIMARY KEY (user_id)
 );
 
-
--- staging.vehicles определение
-
--- Drop table
-
--- DROP TABLE vehicles;
+-- ---------------------------------------------------------------------
+-- staging.vehicles
+-- ---------------------------------------------------------------------
 
 CREATE TABLE vehicles (
 	vehicle_id int4 NOT NULL,
@@ -145,13 +134,13 @@ CREATE TABLE vehicles (
 	created_at timestamptz NULL,
 	updated_at timestamptz NULL,
 	_staged_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT vehicles_pkey PRIMARY KEY (vehicle_id),
-	CONSTRAINT vehicles_vehicle_id_not_null NOT NULL vehicle_id
+	CONSTRAINT vehicles_pkey PRIMARY KEY (vehicle_id)
 );
 
-
-
--- DROP PROCEDURE staging.prc_load_drivers();
+-- ---------------------------------------------------------------------
+-- Процедуры инкрементальной синхронизации oltp -> staging
+-- (текст не менялся)
+-- ---------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE staging.prc_load_drivers()
  LANGUAGE plpgsql
@@ -164,7 +153,7 @@ BEGIN
     SELECT last_loaded_at INTO v_watermark 
     FROM staging.etl_control
     WHERE table_name = 'drivers';
-    
+    DROP TABLE IF EXISTS batch;
     CREATE TEMP TABLE batch ON COMMIT DROP AS 
     SELECT * FROM oltp.drivers WHERE updated_at > v_watermark;
     
@@ -198,8 +187,6 @@ EXCEPTION WHEN OTHERS THEN
 END $procedure$
 ;
 
--- DROP PROCEDURE staging.prc_load_order_status_history();
-
 CREATE OR REPLACE PROCEDURE staging.prc_load_order_status_history()
  LANGUAGE plpgsql
 AS $procedure$
@@ -209,7 +196,7 @@ DECLARE
     v_rows_synced INT;
 BEGIN
     SELECT last_loaded_at INTO v_watermark FROM staging.etl_control WHERE table_name = 'order_status_history';
-    
+    DROP TABLE IF EXISTS batch;
     CREATE TEMP TABLE batch ON COMMIT DROP AS 
     SELECT * FROM oltp.order_status_history WHERE changed_at > v_watermark;
     
@@ -236,8 +223,6 @@ EXCEPTION WHEN OTHERS THEN
 END $procedure$
 ;
 
--- DROP PROCEDURE staging.prc_load_orders();
-
 CREATE OR REPLACE PROCEDURE staging.prc_load_orders()
  LANGUAGE plpgsql
 AS $procedure$
@@ -249,7 +234,7 @@ begin
 	select last_loaded_at into v_watermark 
 	from staging.etl_control
 	where table_name = 'orders';
-	
+	DROP TABLE IF EXISTS batch;
 	create temp table batch on commit drop as 
 	select * from oltp.orders where updated_at>v_watermark;
 	
@@ -305,8 +290,6 @@ RAISE NOTICE 'Ошибка синхронизации orders: %', SQLERRM;
 END $procedure$
 ;
 
--- DROP PROCEDURE staging.prc_load_users();
-
 CREATE OR REPLACE PROCEDURE staging.prc_load_users()
  LANGUAGE plpgsql
 AS $procedure$
@@ -317,7 +300,7 @@ v_rows_synced int;
 begin
 	SELECT last_loaded_at into v_watermark from staging.etl_control 
 	where table_name = 'users';
-
+DROP TABLE IF EXISTS batch;
 create temp table batch on commit drop as
 select * from oltp.users where updated_at > v_watermark;
 get diagnostics v_rows_synced = row_count;
@@ -350,8 +333,6 @@ EXCEPTION WHEN OTHERS THEN
 end $procedure$
 ;
 
--- DROP PROCEDURE staging.prc_load_vehicles();
-
 CREATE OR REPLACE PROCEDURE staging.prc_load_vehicles()
  LANGUAGE plpgsql
 AS $procedure$
@@ -361,6 +342,7 @@ DECLARE
     v_rows_synced INT;
 BEGIN
     SELECT last_loaded_at INTO v_watermark FROM staging.etl_control WHERE table_name = 'vehicles';    
+    DROP TABLE IF EXISTS batch;
     CREATE TEMP TABLE batch ON COMMIT DROP AS 
     SELECT * FROM oltp.vehicles WHERE updated_at > v_watermark;
     

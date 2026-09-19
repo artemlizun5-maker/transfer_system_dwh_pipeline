@@ -32,19 +32,24 @@ with DAG(
         """,
     )
 
-    dbt_run = BashOperator(
-        task_id='dbt_run',
-        bash_command='cd /opt/airflow/transfers_dwh && dbt run --profiles-dir .',
+    dbt_run_staging = BashOperator(
+        task_id='dbt_run_staging',
+        bash_command='cd /opt/airflow/transfers_dwh && dbt run --select path:models/stg --profiles-dir .',
+)
+
+    dbt_snapshot = BashOperator(
+        task_id='dbt_snapshot',
+        bash_command='cd /opt/airflow/transfers_dwh && dbt snapshot --profiles-dir .',
+    )
+
+    dbt_run_marts = BashOperator(
+        task_id='dbt_run_marts',
+        bash_command='cd /opt/airflow/transfers_dwh && dbt run --select path:models/marts --profiles-dir .',
     )
 
     dbt_test = BashOperator(
         task_id='dbt_test',
         bash_command='cd /opt/airflow/transfers_dwh && dbt test --profiles-dir .',
     )
-
-    dbt_snapshot = BashOperator(
-        task_id='dbt_snapshot',
-        bash_command='cd /opt/airflow/transfers_dwh && dbt clean && dbt snapshot --profiles-dir .',
-    )
     
-    load_to_staging >> dbt_snapshot >> dbt_run >> dbt_test
+load_to_staging >> dbt_run_staging >> dbt_snapshot >> dbt_run_marts >> dbt_test

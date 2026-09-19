@@ -3,16 +3,18 @@ from psycopg2 import extras
 from faker import Faker
 import random
 from datetime import timedelta
+import os
+
 
 fake = Faker('ru_RU')
 
 def generate_data():
     conn = psycopg2.connect(
-        dbname="transfer_system", # проверь свое название БД
-        user="postgres", 
-        password="1234", 
-        host="localhost", 
-        port="5432"
+    dbname=os.getenv("POSTGRES_DB", "transfer_system"),
+    user=os.getenv("POSTGRES_USER", "postgres"),
+    password=os.getenv("POSTGRES_PASSWORD", "1234"),
+    host=os.getenv("POSTGRES_HOST", "localhost"),
+    port=os.getenv("POSTGRES_PORT", "5432"),
     )
     cur = conn.cursor()
 
