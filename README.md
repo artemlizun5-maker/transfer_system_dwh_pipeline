@@ -523,6 +523,7 @@ docker compose down -v --remove-orphans
 
 Основная цель проекта — показать, как можно построить законченный локальный Data Engineering pipeline:
 
+```text
 Source OLTP
     ↓
 Incremental ETL
@@ -536,5 +537,6 @@ SCD2 / Incremental models
 DWH / Data Marts
     ↓
 Data Quality Tests
+```
 
 Проект сделан как pet-project для практики PostgreSQL, SQL, PL/pgSQL, dbt, Airflow, Docker и основных подходов Data Engineering.
