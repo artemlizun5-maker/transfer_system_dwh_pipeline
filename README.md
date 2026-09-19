@@ -7,8 +7,6 @@
 **OLTP → Staging → dbt → DWH → Data Marts**,
 с инкрементальной загрузкой, watermark-контролем, SCD2, тестированием данных и оркестрацией через Apache Airflow.
 
-> Сам Telegram Mini App в этот репозиторий не входит. Здесь находится только data-платформа: PostgreSQL, ETL, dbt и Airflow.
-
 ---
 
 ## Architecture
