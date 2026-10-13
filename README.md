@@ -199,10 +199,12 @@ fct_order_status_history
 │   │   ├── Dockerfile
 │   │   └── requirements.txt
 │   │
-│   └── postgres/
+│   ├── postgres/
 │       └── init/
 │           ├── 00_create_databases.sql
-│           └── 01_init_transfer_system.sh
+│           └── 01_init_transfer_system.sql
+│   └── airflow/
+│       └── Dockerfile
 │
 ├── sql/
 │   ├── 01_oltp_schema.sql
@@ -246,6 +248,14 @@ fct_order_status_history
 git clone https://github.com/artemlizun5-maker/transfer_system_dwh_pipeline.git
 cd transfer_system_dwh_pipeline
 ```
+---
+
+## 1.2. Prepare environment
+
+Создаём файл настроек из шаблона:
+
+```bash
+cp .env.example .env
 
 ---
 
