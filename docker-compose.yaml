@@ -104,11 +104,18 @@ services:
       - ./docker/postgres/init:/docker-entrypoint-initdb.d
       - ./sql:/sql
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -U "$${POSTGRES_USER}" -d transfer_system &&
+          psql -U "$${POSTGRES_USER}" -d transfer_system -tAc
+          "SELECT to_regnamespace('oltp') IS NOT NULL AND to_regnamespace('staging') IS NOT NULL"
+          | grep -qx t
       interval: 10s
-      retries: 5
-      start_period: 5s
-    restart: always
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
 
   data-generator:
     build:
