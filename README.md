@@ -90,14 +90,14 @@ load_to_staging
         ↓
 dbt_run_staging
         ↓
+dbt_test_staging
+        ↓
 dbt_snapshot
         ↓
 dbt_run_marts
         ↓
-dbt_test
+dbt_test_marts
 ```
-
-Это важно, потому что snapshots используют модели `stg_*`, поэтому staging-модели должны существовать до запуска `dbt snapshot`.
 
 ---
 
